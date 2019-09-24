@@ -1,5 +1,5 @@
 {
-    "name": "shela/RedfinParser",
+    "name": "shela/redfin-parser",
     "description": "Parser for redfin.com",
     "type": "library",
     "require": {
