@@ -22,7 +22,7 @@ class Request
         $this->client = new \GuzzleHttp\Client();
     }
 
-    public function request($url, $method = 'GET', $headers = [], $json = true)
+    public function request($url, $method = 'GET', $headers = [], $type = "json")
     {
         $headers = $this->combineHeaders($headers);
         $client = new GuzzleHttp([
@@ -33,19 +33,25 @@ class Request
         $jar = new \GuzzleHttp\Cookie\CookieJar();
 
         try {
-            $response = $client->request($method, $url, [
+            $request_params = [
                 'headers' => $headers,
                 'verify'  => false,
                 'cookies' => $jar,
                 'proxy'   => $this->proxy,
-            ]);
-            if($json)
+            ];
+            if($type == "file"){
+                $request_params['stream'] = true;
+                $request_params['sink'] = STDOUT;
+            }
+            $response = $client->request($method, $url, $request_params);
+            if($type == "json")
                 $result = json_decode($this->parseResult($response->getBody()->getContents()),true);
+            elseif($type == "file")
+                $result = $response->getBody()->getContents();
             else $result = $response->getBody()->getContents();
             return $result;
         } catch (RequestException $e) {
             $response = $this->StatusCodeHandling($e);
-
             return $response;
         }
     }

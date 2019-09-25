@@ -27,8 +27,10 @@ class Query
 
     public function details($string, $limit=10, $offset = 0){
         if(!$string && !$limit) die();
+        $string = str_replace('&amp;','&',$string);
         $content_page = $this->request->request("https://www.redfin.com/".$string,'GET',[],false);
         if($content_page){
+            $content_page = str_replace('&amp;','&',$content_page);
             $doc = new \DOMDocument();
             libxml_use_internal_errors(true);
             $doc->loadHTML($content_page);
