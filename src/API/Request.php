@@ -56,6 +56,16 @@ class Request
         }
     }
 
+    public function exists($file)
+    {
+        try {
+            $this->client->head($file);
+            return true;
+        } catch (\GuzzleHttp\Exception\ClientException $e) {
+            return false;
+        }
+    }
+
     private function parseResult($result="")
     {
         return str_replace(['{}&&'],'',$result);

@@ -36,32 +36,59 @@ class Query
             $doc->loadHTML($content_page);
             $model = $doc->getElementById("download-and-save");
             $url = "https://www.redfin.com".$model->getAttribute('href');
-            $h = fopen($url, "r");
+            $h = file_get_contents($url);
             if($h) {
                 $index = $num = 0;
                 $return_data = [];
-                while (($data = fgetcsv($h, 1000, ",")) !== FALSE) {
+                $datas = $this->processCsv($h);
+                unset($datas[0]);
+                foreach($datas as $data){
+                    if(!$data[0]) continue;
                     $index++;
                     if ($index < $offset + 1) continue;
                     $num++;
                     if ($num > $limit + 1) break;
 
-                    if ($index == 1) continue; //[0] => SALE TYPE, [1] => SOLD DATE, [2] => PROPERTY TYPE, [3] => ADDRESS, [4] => CITY, [5] => STATE OR PROVINCE, [6] => ZIP OR POSTAL CODE, [7] => PRICE, [8] => BEDS, [9] => BATHS, [10] => LOCATION, [11] => SQUARE FEET, [12] => LOT SIZE, [13] => YEAR BUILT, [14] => DAYS ON MARKET, [15] => $/SQUARE FEET, [16] => HOA/MONTH, [17] => STATUS, [18] => NEXT OPEN HOUSE START TIME, [19] => NEXT OPEN HOUSE END TIME, [20] => URL (SEE http://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING), [21] => SOURCE, [22] => MLS#, [23] => FAVORITE, [24] => INTERESTED, [25] => LATITUDE, [26] => LONGITUDE
-                    $make_url = "https://ssl.cdn-redfin.com/photo/234/islphoto/" . substr($data[22], -3) . "/genIslnoResize." . $data[22] . "_0.jpg";
-                    $a = $this->request->request($make_url);
-                    if ($a['status'] == 'success') {
-                        $data[] = $make_url;
+                    $data_array = [
+                        'sale_type' => $data[0],
+                        'sold_date' => $data[1],
+                        'property_type' => $data[2],
+                        'address' => $data[3],
+                        'city' => $data[4],
+                        'state_province' => $data[5],
+                        'zip_postal' => $data[6],
+                        'price' => $data[7],
+                        'beds' => $data[8],
+                        'baths' => $data[9],
+                        'location' => $data[10],
+                        'square_feet' => $data[11],
+                        'lot_size' => $data[12],
+                        'year_built' => $data[13],
+                        'days_on_market' => $data[14],
+                        '$_square_feet' => $data[15],
+                        'hoa_month' => $data[16],
+                        'status' => $data[17],
+                        'next_open_house_start_time' => $data[18],
+                        'next_open_house_end_time' => $data[19],
+                        'url' => $data[20],
+                        'source' => $data[21],
+                        'mlc' => $data[22],
+                        'favorite' => $data[23],
+                        'interested' => $data[24],
+                        'latitude' => $data[25],
+                        'longitude' => $data[26]
+                    ];
+
+                    $make_url = "https://ssl.cdn-redfin.com/photo/95/islphoto/" . substr($data[22], -3) . "/genIslnoResize." . $data[22] . "_0.jpg";
+                    if ($this->request->exists($make_url)) {
+                        $data_array['image'] = $make_url;
                     } else {
-                        $data[] = "https://ssl.cdn-redfin.com/v280.3.0/images/homecard/ghosttown-640x460.png";
+                        $data_array['image'] = "https://ssl.cdn-redfin.com/v280.3.0/images/homecard/ghosttown-640x460.png";
                     }
-                    $return_data[] = $data;
+                    $return_data[] = $data_array;
                 }
-                fclose($h);
                 if ($return_data) {
                     $is_has_offset = 0;
-                    if ((fgetcsv($h, 1000, ",")) !== FALSE) {
-                        $is_has_offset = 1;
-                    }
                     $arr = [
                         'data' => $return_data,
                         'is_has_offset' => $is_has_offset
@@ -75,6 +102,65 @@ class Query
             }
         }else{
             return false;
+        }
+    }
+
+    public function item($string=false, $mls=false){
+        if(!$string && !$mls) die();
+        $string = str_replace('&amp;','&',$string);
+        $content_page = $this->request->request($string,'GET',[],false);
+        if($content_page){
+            $content_page = str_replace('&amp;','&',$content_page);
+            $doc = new \DOMDocument();
+            libxml_use_internal_errors(true);
+            $doc->loadHTML($content_page);
+            $xpath = new \DOMXPath($doc);
+            $model = $xpath->query('//div[@class="SpritedImageCard"]/img');
+            $return_data = [];
+            $template_url = $xpath->query('//span[@class="FadeItem visible"]/div[@class="ImageCard"]/img');
+            $url_id = 0;
+            if($template_url->length){
+                $url = $template_url->item(0)->getAttribute('src');
+                $return_data['images'][] = $url;
+                $url_id = explode('_',explode('.jpg', $url)[0])[1];
+            }
+            for($i=1;$i<$model->length;$i++){
+                $return_data['images'][] = "https://ssl.cdn-redfin.com/photo/234/mbpaddedwide/" . substr($mls, -3) . "/genMid." . $mls . "_" . $i ."_".$url_id.".jpg";
+            }
+            $description = $xpath->query('//div[@class="remarks"]/p/span');
+            if($description->length){
+                $return_data['description'] = $description->item(0)->nodeValue;
+            }
+            $details = $xpath->query('//div[@class="keyDetailsList"]/div');
+            if($details->length){
+                $details_arr = [];
+                for($i=1;$i<=$details->length;$i++){
+                    $header = $xpath->query('//div[@class="keyDetailsList"]/div['.$i.']/span[1]');
+                    $content = $xpath->query('//div[@class="keyDetailsList"]/div['.$i.']/span[2]');
+                    $details_arr[] = [$header->item(0)->nodeValue, $content->item(0)->nodeValue];
+                }
+                if($details_arr){
+                    $return_data['details'] = $details_arr;
+                }
+            }
+            if($return_data){
+                return $return_data;
+            }else{
+                return false;
+            }
+        }else{
+            return false;
+        }
+    }
+
+    function processCsv($string)
+    {
+        try{
+            $csv = new \Jabran\CSV_Parser();
+            $csv->fromString($string);
+            return $csv->parse(false);
+        }catch (\Exception $e){
+            return [];
         }
     }
 }
