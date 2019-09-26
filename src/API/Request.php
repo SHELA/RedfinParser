@@ -30,7 +30,11 @@ class Request
             'verify' => false,
             'allow_redirects' => true
         ]);
-        $jar = new \GuzzleHttp\Cookie\CookieJar();
+
+        $jar = \GuzzleHttp\Cookie\CookieJar::fromArray([
+            'RF_UNBLOCK_ID' => 'BtUhMmW7',
+            'AKA_A2' => 'A',
+        ], 'redfin.com');
 
         try {
             $request_params = [
