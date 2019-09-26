@@ -81,13 +81,13 @@ class Query
                             'longitude' => $data[26]
                         ];
                         if ($data_array['url']) {
-                            $a = $this->request->request($data_array['url'], 'GET', [], false);
-                            if ($a) {
-                                $data_url = $this->get_image_list($a);
-                                $data_array['url_image'] = $data_url[0];
-                            } else {
+//                            $a = $this->request->request($data_array['url'], 'GET', [], false);
+//                            if ($a) {
+//                                $data_url = $this->get_image_list($a);
+//                                $data_array['url_image'] = $data_url[0];
+//                            } else {
                                 $data_array['url_image'] = "https://ssl.cdn-redfin.com/v280.3.0/images/homecard/ghosttown-640x460.png";
-                            }
+//                            }
                             $return_data[] = $data_array;
                         }
                     }else{
