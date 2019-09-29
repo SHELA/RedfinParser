@@ -4,6 +4,7 @@
     "type": "library",
     "keywords": ["redfin", "parser"],
     "homepage": "https://github.com/shela/redfin-parser",
+    "minimum-stability": "stable",
     "license": [
         "RPL-1.5",
         "proprietary"
