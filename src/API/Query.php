@@ -35,18 +35,33 @@ class Query
             $doc = new \DOMDocument();
             libxml_use_internal_errors(true);
             $doc->loadHTML($content_page);
+            $xpath = new \DOMXPath($doc);
+            $t = $xpath->query('//div[@class="remarks-container"]');
+            $image_num = 0;
+            if ($t->length) {
+                $image_n = $t->item(0)->getAttribute('style');
+                if($image_n){
+                    $image_num = explode('/',explode('.com/photo/', $image_n)[1])[0];
+                }
+            }
+
             $model = $doc->getElementById("download-and-save");
             $url = "https://www.redfin.com" . $model->getAttribute('href');
             $url_path = $this->request->request($url, 'GET', [], false);
             $file_data = $this->processCsv($url_path);
             if($file_data) {
-                $index = $num = 0;
+                $index = $num = $is_has_offset = 0;
                 $return_data = [];
-                foreach ($file_data as $data) {
+                foreach ($file_data as $k => $data) {
                     $index++;
                     if ($offset && ($index < $offset + 1)) continue;
                     $num++;
-                    if ($limit && ($num > $limit + 1)) break;
+                    if ($limit && ($num > $limit + 1)) {
+                        if(array_key_exists($k+1, $file_data)){
+                            $is_has_offset = 1;
+                        }
+                        break;
+                    }
 
                     if ($index == 1) continue; //[0] => SALE TYPE, [1] => SOLD DATE, [2] => PROPERTY TYPE, [3] => ADDRESS, [4] => CITY, [5] => STATE OR PROVINCE, [6] => ZIP OR POSTAL CODE, [7] => PRICE, [8] => BEDS, [9] => BATHS, [10] => LOCATION, [11] => SQUARE FEET, [12] => LOT SIZE, [13] => YEAR BUILT, [14] => DAYS ON MARKET, [15] => $/SQUARE FEET, [16] => HOA/MONTH, [17] => STATUS, [18] => NEXT OPEN HOUSE START TIME, [19] => NEXT OPEN HOUSE END TIME, [20] => URL (SEE http://www.redfin.com/buy-a-home/comparative-market-analysis FOR INFO ON PRICING), [21] => SOURCE, [22] => MLS#, [23] => FAVORITE, [24] => INTERESTED, [25] => LATITUDE, [26] => LONGITUDE
 
@@ -80,26 +95,21 @@ class Query
                             'latitude' => $data[25],
                             'longitude' => $data[26]
                         ];
-                        if ($data_array['url']) {
-//                            $a = $this->request->request($data_array['url'], 'GET', [], false);
-//                            if ($a) {
-//                                $data_url = $this->get_image_list($a);
-//                                $data_array['url_image'] = $data_url[0];
-//                            } else {
-                                $data_array['url_image'] = "https://ssl.cdn-redfin.com/v280.3.0/images/homecard/ghosttown-640x460.png";
-//                            }
-                            $return_data[] = $data_array;
+                        $make_url = "https://ssl.cdn-redfin.com/photo/". $image_num ."/islphoto/" . substr($data['22'], -3) . "/genIslnoResize." . $data['22'] . "_0.jpg";
+
+                        $a = $this->request->exists($make_url);
+                        if ($a) {
+                            $data_array['url_image'] = $make_url;
+                        } else {
+                            $data_array['url_image'] = "https://ssl.cdn-redfin.com/v280.3.0/images/homecard/ghosttown-640x460.png";
                         }
+                        $return_data[] = $data_array;
                     }else{
                         $num--;
                         $index--;
                     }
                 }
                 if ($return_data) {
-                    $is_has_offset = 0;
-//                    if ((fgetcsv($h, 1000, ",")) !== FALSE) {
-//                        $is_has_offset = 1;
-//                    }
                     $arr = [
                         'data' => $return_data,
                         'is_has_offset' => $is_has_offset
@@ -130,8 +140,7 @@ class Query
             $return_data = [];
             $data_url = $this->get_image_list($content_page);
             if ($data_url) {
-                $return_data['image'][] = $data_url;
-
+                $return_data['images'] = $data_url;
                 $description = $xpath->query('//div[@class="remarks"]/p/span');
                 if ($description->length) {
                     $return_data['description'] = $description->item(0)->nodeValue;
@@ -188,7 +197,8 @@ class Query
     function b($match) {
         return mb_convert_encoding(pack('H*', $match[1]), 'UTF-8', 'UCS-2BE');
     }
-    function unicode_decode($str) {
+    function unicode_decode($str)
+    {
         return preg_replace_callback('/\\\\u([0-9a-f]{4})/i', array(&$this, 'b'), $str);
     }
 }
