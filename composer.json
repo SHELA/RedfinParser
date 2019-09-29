@@ -4,7 +4,10 @@
     "type": "library",
     "keywords": ["redfin", "parser"],
     "homepage": "https://github.com/shela/redfin-parser",
-    "license": "BSD",
+    "license": [
+        "RPL-1.5",
+        "proprietary"
+    ],
     "require": {
         "guzzlehttp/guzzle": "^6.3",
         "php": "^7.0",
