@@ -2,6 +2,9 @@
     "name": "shela/redfin-parser",
     "description": "Parser for redfin.com",
     "type": "library",
+    "keywords": ["redfin", "parser"],
+    "homepage": "https://github.com/shela/redfin-parser",
+    "license": "BSD",
     "require": {
         "guzzlehttp/guzzle": "^6.3",
         "php": "^7.0",
